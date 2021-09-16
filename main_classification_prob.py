@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import math
 from sklearn.model_selection import train_test_split
 from keras.utils.np_utils import to_categorical
-from ResNet_class import ResNet
+from ResNet import ResNet
 from sklearn.metrics import mean_squared_error, mean_absolute_percentage_error
 
 ############# DATA PREPARATION ###################
