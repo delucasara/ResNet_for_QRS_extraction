@@ -96,7 +96,7 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
         # self.linear = nn.Linear(512*block.expansion, num_classes)
-        self.linear1 = nn.Linear(4608*block.expansion, 1024)
+        self.linear1 = nn.Linear(2048*block.expansion, 1024)
         self.linear2 = nn.Linear(1024, num_classes)
 
     
@@ -119,7 +119,8 @@ class ResNet(nn.Module):
         out = self.layer4(out)
 
         #out = F.avg_pool1d(out, 4)
-        out = F.avg_pool1d(out, 16)
+        out = F.adaptive_avg_pool1d(out, 4)
+        # out = F.avg_pool1d(out, 16)
         out = out.view(out.size(0), -1)
         out = self.linear1(out)
         out = self.linear2(out)
