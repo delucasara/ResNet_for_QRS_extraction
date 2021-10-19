@@ -152,12 +152,12 @@ class HDF5Dataset(Dataset):
                     idx = -1
                     if load_data:
                         # add data to the data cache
-                        idx = self._add_to_cache(ds.value, file_path)
+                        idx = self._add_to_cache(ds[()], file_path)
                     
                     # type is derived from the name of the dataset; we expect the dataset
                     # name to have a name such as 'data' or 'label' to identify its type
                     # we also store the shape of the data in case we need it
-                    self.data_info.append({'file_path': file_path, 'type': dname, 'shape': ds.value.shape, 'cache_idx': idx})
+                    self.data_info.append({'file_path': file_path, 'type': dname, 'shape': ds[()].shape, 'cache_idx': idx})
 
     def _load_data(self, file_path):
         """Load data to the cache given the file
@@ -169,7 +169,7 @@ class HDF5Dataset(Dataset):
                 for dname, ds in group.items():
                     # add data to the data cache and retrieve
                     # the cache index
-                    idx = self._add_to_cache(ds.value, file_path)
+                    idx = self._add_to_cache(ds[()], file_path)
 
                     # find the beginning index of the hdf5 file we are looking for
                     file_idx = next(i for i,v in enumerate(self.data_info) if v['file_path'] == file_path)
@@ -365,8 +365,8 @@ def train_model(train_dl, valid_dl, model, learning_rate, optimizer, model_name)
     valid_loss_history = list()
     # enumerate epochs
     start = time.time()
-    for epoch in range(20):
-        s = "Epoch " + str(epoch+1) + "/5"
+    for epoch in range(200):
+        s = "Epoch " + str(epoch+1) + "/200"
         print(s, end="\t")
         
         train_loss = 0.0
@@ -425,15 +425,15 @@ def train_model(train_dl, valid_dl, model, learning_rate, optimizer, model_name)
     plt.savefig("./ResNet_results/loss_" +model_name+".png")
     plt.show()
     
-    # plt.figure()
-    # plt.title("Loss history zoom - "+model_name)
-    # plt.xlim([25, 300])
-    # plt.xlabel("Epochs")
-    # plt.grid()
-    # plt.ylabel("SmoothL1Loss")
-    # plt.plot(loss_history[25:])
-    # plt.savefig("./ResNet_results/loss_zoom" +model_name+".png")
-    # plt.show()
+    plt.figure()
+    plt.title("Loss history zoom - "+model_name)
+    plt.xlim([25, 200])
+    plt.xlabel("Epochs")
+    plt.grid()
+    plt.ylabel("SmoothL1Loss")
+    plt.plot(loss_history[25:])
+    plt.savefig("./ResNet_results/loss_zoom" +model_name+".png")
+    plt.show()
     
     plt.figure()
     plt.title("Validation loss history - "+model_name)
@@ -444,6 +444,15 @@ def train_model(train_dl, valid_dl, model, learning_rate, optimizer, model_name)
     plt.savefig("./ResNet_results/val_loss_" +model_name+".png")
     plt.show()
             
+    plt.figure()
+    plt.title("Validation loss history zoom - "+model_name)
+    plt.xlim([25, 200])
+    plt.xlabel("Epochs")
+    plt.grid()
+    plt.ylabel("SmoothL1Loss")
+    plt.plot(valid_loss_history[25:])
+    plt.savefig("./ResNet_results/valid_loss_zoom" +model_name+".png")
+    plt.show()
 
 
 

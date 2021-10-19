@@ -4,15 +4,15 @@ from torchsummary import summary
 import matplotlib.pyplot as plt
 
 # path = './Dataset_QRS_detection'
-path_train = './Prove/train'
-path_valid = './Prove/validation'
-path_test = './Prove/test'
+path_train = './Prove_1500/train'
+path_valid = './Prove_1500/validation'
+path_test = './Prove_1500/test'
 
-model_name = "ResNet18"
+model_name = ""
 
 batch_size = 1
-learning_rate = 1e-2
-optimizer = "adam"
+learning_rate = 1e-4
+optimizer = "sgd"
 
 model = ResNet18_Counter()
 print(summary(model, (1,1200)))
