@@ -215,9 +215,17 @@ class HDF5Dataset(Dataset):
         cache_idx = self.get_data_infos(type)[i]['cache_idx']
         return self.data_cache[fp][cache_idx]
  
+    
+def my_collate(batch):
+    data = [item[0] for item in batch]
+    target = [item[1] for item in batch]
+    target = torch.LongTensor(target)
+    return [data, target]
+ 
+
  
 # prepare the dataset
-def prepare_data(path,batch_size,n_valid,n_test):
+def prepare_data(path,batch_size):
     # load the dataset
     # dataset = CSVDataset(path, normalize = True)
     dataset = HDF5Dataset(path, recursive=False, load_data=False, data_cache_size=4, transform=None)
@@ -234,7 +242,9 @@ def prepare_data(path,batch_size,n_valid,n_test):
     # train_dl = DataLoader(train, batch_size=batch_size, shuffle=True)
     # valid_dl = DataLoader(validation, batch_size=batch_size, shuffle=True)
     # test_dl = DataLoader(test, batch_size=batch_size, shuffle=False)
-    loader_params = {'batch_size': batch_size, 'shuffle': True}
+    loader_params = {'batch_size': batch_size, 'shuffle': True, 
+                     # 'collate_fn': my_collate
+                     }
     train_dl = DataLoader(dataset, **loader_params)
     
     return train_dl
@@ -337,7 +347,7 @@ def prepare_data(path,batch_size,n_valid,n_test):
     
 # train the model without validation
 
-def train_model(train_dl, model, learning_rate, optimizer, model_name):
+def train_model(train_dl, valid_dl, model, learning_rate, optimizer, model_name):
     global start
     # define the optimization
     # criterion = BCEWithLogitsLoss()
@@ -355,7 +365,7 @@ def train_model(train_dl, model, learning_rate, optimizer, model_name):
     valid_loss_history = list()
     # enumerate epochs
     start = time.time()
-    for epoch in range(5):
+    for epoch in range(20):
         s = "Epoch " + str(epoch+1) + "/5"
         print(s, end="\t")
         
@@ -373,6 +383,7 @@ def train_model(train_dl, model, learning_rate, optimizer, model_name):
             optimizer.zero_grad()
             # compute the model output
             yhat = model(inputs.float())
+            # yhat = model(inputs)
             # print("Prediction vs Target", round(yhat.item(),1), targets.item(),1, end = "\t")
             # calculate loss
             loss = criterion(yhat, targets.float())
@@ -384,15 +395,66 @@ def train_model(train_dl, model, learning_rate, optimizer, model_name):
             
         loss_history.append(train_loss.item())
         print("train loss: "+str(train_loss.item()),end="\t")
+        
+        #VALIDATE NETWORK
+        valid_loss = 0.0
+        #model.eval()     # Optional when not using Model Specific layer
+        for i, (inputs, targets) in enumerate(iter(valid_dl)):
+            targets = torch.reshape(targets, (targets.shape[0], 1))
+            # only if batchsize = 1 reshape inputs
+            inputs = torch.reshape(inputs, (1,1,inputs.shape[1]))
+            # # Transfer Data to GPU if available
+            # if torch.cuda.is_available():
+            #   inputs, targets = inputs.cuda(), targets.cuda()
+            # Forward Pass
+            yhat = model(inputs.float())
+            # Find the Loss
+            loss = criterion(yhat,targets.float())
+            # Calculate Loss
+            valid_loss += loss
+            
+        valid_loss_history.append(valid_loss.item())
+        print("validation loss: "+str(valid_loss.item()),end="\n")
+        
+    plt.figure()
+    plt.title("Loss history - "+model_name)
+    plt.xlabel("Epochs")
+    plt.grid()
+    plt.ylabel("SmoothL1Loss")
+    plt.plot(loss_history)
+    plt.savefig("./ResNet_results/loss_" +model_name+".png")
+    plt.show()
+    
+    # plt.figure()
+    # plt.title("Loss history zoom - "+model_name)
+    # plt.xlim([25, 300])
+    # plt.xlabel("Epochs")
+    # plt.grid()
+    # plt.ylabel("SmoothL1Loss")
+    # plt.plot(loss_history[25:])
+    # plt.savefig("./ResNet_results/loss_zoom" +model_name+".png")
+    # plt.show()
+    
+    plt.figure()
+    plt.title("Validation loss history - "+model_name)
+    plt.xlabel("Epochs")
+    plt.grid()
+    plt.ylabel("SmoothL1Loss")
+    plt.plot(valid_loss_history)
+    plt.savefig("./ResNet_results/val_loss_" +model_name+".png")
+    plt.show()
             
 
 
 
 # evaluate the model
 def evaluate_model(test_dl, model, t, title):
+    min_y = 30.0
+    max_y = 93.0
     predictions, actuals = list(), list()
     for i, (inputs, targets) in enumerate(iter(test_dl)):
         # evaluate the model on the test set
+        inputs = torch.reshape(inputs, (1,1,inputs.shape[1]))
         yhat = model(inputs.float())
         # retrieve numpy array
         yhat = yhat.detach().numpy()
@@ -414,15 +476,15 @@ def evaluate_model(test_dl, model, t, title):
     end = time.time()
     runtime = end - start
     
-    # plt.figure()
-    # plt.plot(np.linspace(25, 175), np.linspace(25, 175), 'magenta')
-    # plt.scatter(y,y_hat, s=5, color='indigo')
-    # plt.xlabel("Real")
-    # plt.ylabel("Predicted")
-    # plt.title("Real vs Predicted " + t + " - " + title)
-    # plt.grid()
-    # plt.savefig("./ResNet_results/scatter_" +title+t+".png")
-    # plt.show()
+    plt.figure()
+    plt.plot(np.linspace(25, 155), np.linspace(25, 155), 'magenta')
+    plt.scatter(y,y_hat, s=5, color='indigo')
+    plt.xlabel("Real")
+    plt.ylabel("Predicted")
+    plt.title("Real vs Predicted " + t + " - " + title)
+    plt.grid()
+    plt.savefig("./ResNet_results/scatter_" +title+t+".png")
+    plt.show()
     
     return acc, acc_denorm, r2, runtime, y-y_hat
 
